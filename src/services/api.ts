@@ -38,9 +38,15 @@ async function request<T>(
 
 export const authApi = {
   register: (name: string, email: string, password: string) =>
-    request<{ success: boolean; message: string }>("/auth/register", {
+    request<{ success: boolean; message: string; emailSent: boolean }>("/auth/register", {
       method: "POST",
       body: { name, email, password },
+    }),
+
+  resendVerification: (email: string) =>
+    request<{ success: boolean; message: string }>("/auth/resend-verification", {
+      method: "POST",
+      body: { email },
     }),
 
   login: (email: string, password: string) =>

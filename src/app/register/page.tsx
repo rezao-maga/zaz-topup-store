@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
+import { authApi } from "@/services/api";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -67,7 +67,6 @@ function Spinner() {
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const router = useRouter();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -75,6 +74,18 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registered, setRegistered] = useState(false);
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent">("idle");
+
+  const handleResend = async () => {
+    setResendStatus("sending");
+    try {
+      await authApi.resendVerification(email);
+      setResendStatus("sent");
+    } catch {
+      setResendStatus("idle");
+    }
+  };
 
   const passwordStrength =
     password.length === 0
@@ -106,7 +117,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(name, email, password);
-      router.push("/login?registered=1");
+      setRegistered(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registrasi gagal");
     } finally {
@@ -273,6 +284,62 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+
+      {/* Popup verifikasi email */}
+      {registered && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="verify-title"
+        >
+          <div className="w-full max-w-sm border border-slate-200 bg-white p-8 text-center shadow-lg">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-blue-600"
+                aria-hidden="true"
+              >
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+            </div>
+            <h2 id="verify-title" className="text-xl font-bold text-slate-900">
+              Verifikasi email kamu
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              Kami sudah mengirim link verifikasi ke{" "}
+              <strong className="text-slate-700">{email}</strong>. Buka email
+              tersebut dan klik tombolnya sebelum masuk.
+            </p>
+            <Link
+              href="/login"
+              className="mt-6 block w-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+            >
+              Ke Halaman Login
+            </Link>
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resendStatus !== "idle"}
+              className="mt-3 text-sm font-semibold text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {resendStatus === "sent"
+                ? "Email terkirim ulang ✓"
+                : resendStatus === "sending"
+                  ? "Mengirim..."
+                  : "Tidak menerima email? Kirim ulang"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

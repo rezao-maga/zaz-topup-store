@@ -5,6 +5,7 @@ import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { authLimiter, checkRateLimit, getClientIp } from "@/lib/ratelimit";
 import { registerSchema, parseBody } from "@/lib/validation";
+import { issueVerification } from "@/lib/verification";
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,10 +35,21 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    await db.insert(users).values({ name, email, password: hashedPassword });
+    const [created] = await db
+      .insert(users)
+      .values({ name, email, password: hashedPassword })
+      .returning({ id: users.id });
+
+    // Gagal kirim email ≠ gagal register: akun tetap dibuat, user bisa
+    // minta kirim ulang. Frontend pakai flag ini untuk memberi tahu.
+    const { ok: emailSent } = await issueVerification(created.id, email);
 
     return NextResponse.json(
-      { success: true, message: "Register berhasil" },
+      {
+        success: true,
+        message: "Register berhasil. Cek email kamu untuk verifikasi.",
+        emailSent,
+      },
       { status: 201 }
     );
   } catch {

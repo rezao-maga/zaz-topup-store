@@ -44,6 +44,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Cek verifikasi SETELAH password valid: kalau dicek sebelum, orang bisa
+    // memakai respons ini untuk menebak email mana yang terdaftar.
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email belum diverifikasi. Cek inbox kamu.",
+          needVerification: true,
+        },
+        { status: 403 }
+      );
+    }
+
     const token = generateToken(user);
     await setAuthCookie(token);
 

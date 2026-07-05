@@ -6,6 +6,13 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("user"),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  // Hash SHA-256 dari token, bukan token mentah: kalau DB bocor, isi kolom
+  // ini tidak bisa dipakai untuk memverifikasi akun orang lain.
+  // ponytail: satu token aktif per user (kolom di users, bukan tabel terpisah);
+  // pindah ke tabel sendiri kalau nanti butuh multi-token (reset password dll).
+  verifyTokenHash: text("verify_token_hash"),
+  verifyTokenExpires: timestamp("verify_token_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
